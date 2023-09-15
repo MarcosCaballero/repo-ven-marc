@@ -1,0 +1,14 @@
+ventas/
+data.sqilte
+dataFlxx.sqilte
+data_previa.csv
+index.html
+Informe_markups_erroneos.xlsx
+markups.csv
+__pycache__
+.env
+venv
+helpers/dbs
+data.sqlite
+dataFlxx.sqlite
+markups_marcas.csv
