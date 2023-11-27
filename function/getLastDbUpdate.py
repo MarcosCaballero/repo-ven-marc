@@ -1,6 +1,6 @@
 from helpers.connection import connectionConfig
 import pandas as pd
-import funcition.queries as  q
+import function.queries as  q
 
 
 def getLastInfoUpdate():

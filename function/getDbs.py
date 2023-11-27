@@ -1,5 +1,5 @@
 import pandas as pd
-import funcition.queries as  q
+import function.queries as  q
 from helpers.connection import connectionLocal
 from helpers.flxx import connectionDistriPPAL, connectionDistriDS, connectionDimesPPAL, connectionDimesDS
 
@@ -66,6 +66,8 @@ def getDbs():
         resMarkups.to_sql("markups", con=connLocal, if_exists='replace', index=False)
         print("Se han actualizado las tablas locales")
         res = {"message": "Se han actualizado las tablas locales"}
+        return res
     except Exception as e:
         res = {"error": str(e)}
+        print(e)
         return res
