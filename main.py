@@ -4,15 +4,16 @@ from helpers.connection import connectionConfig
 from function.getDbs import getDbs
 from function.getLastDbUpdate import getLastInfoUpdate
 from function.getInforme import getInforme
-from function.getInformeCant import getInformeCant
+from function.getInformeCant import getInformeCant, getInformeCantMonth
 from time import time
 import os
 from flask_cors import CORS
 import waitress
 from helpers.Notifier import Notifier
 
-from flask import Flask, send_file
+from flask import Flask, send_file, request
 from sqlalchemy import text
+import re 
 
 app = Flask(__name__)
 
@@ -67,29 +68,34 @@ def getNewInfo():
         res["error"] = str(e)
         return res
 
-@app.route("/getNewInfoCant")
+@app.route("/getNewInfoCant", methods=["GET"])
 def getNewInfoCant():
     try:
         res = {}
-        # resDb = getDbs()
+        # Tomamos la información de las fechas que viene por query params
+        month = request.args.get("date")
+        patron = re.compile(r"^\d{4}-\d{2}$")
+        if patron.match(month):
 
-        if False:
-            res["status"] = "Error"
-            res["error"] = "No se pudo guardar la informacion en la base de datos local"
-            return res
-        else: 
-            resInfo = getInformeCant()
-            if resInfo == False:
-                res["status"] = "error"
-                res["error"] = "No se pudo crear el informe"
+            # resDb = getDbs()
+            # return resDb
+            if False:
+                res["status"] = "Error"
+                res["error"] = "No se pudo guardar la informacion en la base de datos local"
                 return res
-            else:
-                res["status"] = "success"
-                res["message"] = "Se creo el informe correctamente"
-                return res
-        # return resDb
+            else: 
+                resInfo = getInformeCantMonth(month)
+                if resInfo == False:
+                    res["status"] = "error"
+                    res["error"] = "No se pudo crear el informe"
+                    return res
+                else:
+                    res["status"] = "success"
+                    res["message"] = "Se creo el informe correctamente"
+                    return res
+            # return resDb
     except Exception as e:
-        Notifier("Error al obtener el nuevo informe de cantidades")
+        # Notifier("Error al obtener el nuevo informe de cantidades")
         res = {}
         res["status"] = "error"
         res["error"] = str(e)

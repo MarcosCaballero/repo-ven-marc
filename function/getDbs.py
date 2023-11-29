@@ -2,6 +2,7 @@ import pandas as pd
 import function.queries as  q
 from helpers.connection import connectionLocal
 from helpers.flxx import connectionDistriPPAL, connectionDistriDS, connectionDimesPPAL, connectionDimesDS
+from helpers.vps import connectionVPS69
 
 def getDbs():
     try:
@@ -12,6 +13,7 @@ def getDbs():
         connFlxxDistriDS = connectionDistriDS()
         connFlxxDimes = connectionDimesPPAL()
         connFlxxDimesDS = connectionDimesDS()
+        connVPS69 = connectionVPS69()
         connLocal = connectionLocal()
         # TOMAMOS LOS CLIENTES DE DISTRI
         resClientes = pd.read_sql(q.getAllClientesDistri, con=connFlxxDistri)
@@ -53,6 +55,9 @@ def getDbs():
         # TOMAMOS LOS ARTICULOS DE DISTRI
         resArticulosDistri = pd.read_sql(q.getAllArticulosDistri, con=connFlxxDistri)
         resArticulosDistri.to_sql("articulos_distri", con=connLocal, if_exists='replace', index=False)
+        # TOMAMOS LAS CAMPAÑAS DE DISTRI
+        resCampanas = pd.read_sql(q.getCampamas, con=connVPS69)
+        resCampanas.to_sql("CAMPANAS", con=connLocal, if_exists='replace', index=False)
         # TOMAMOS LOS MARKUPS DE DISTRI
         resMarkups = pd.read_excel("helpers/data/informe_markups_erroneos.xlsx", engine="openpyxl")
         resMarkups = resMarkups[["CODIGOMARCA","DESCRIPCION","MARGEN"]]

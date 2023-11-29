@@ -105,6 +105,12 @@ getCuerpoComprobantesDimesDS = f"""SELECT c.TIPOCOMPROBANTE, c.NUMEROCOMPROBANTE
 
 # queries local
 
-getAllBrandsDistri = """SELECT * FROM marcas_distri where CODIGOMARCA = '002'"""
+getAllBrandsDistri = """SELECT * FROM marcas_distri"""
 getLastUpdateInfo = """SELECT * FROM info_updates ORDER BY created_at DESC LIMIT 1"""
+
+# VPS 69
+getCampamas = "SELECT * FROM CAMPANAS"
+
+def getCreatedCampanas(date): 
+    return f"""SELECT * FROM CAMPANAS WHERE created_at LIKE '%{date}%'"""
 
