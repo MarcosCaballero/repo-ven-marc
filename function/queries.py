@@ -105,7 +105,12 @@ getCuerpoComprobantesDimesDS = f"""SELECT c.TIPOCOMPROBANTE, c.NUMEROCOMPROBANTE
 
 # queries local
 
-getAllBrandsDistri = """SELECT * FROM marcas_distri"""
+def getAllBrandsDistri(brands):
+    print(len(brands))
+    if len(brands) > 0:
+        return f"""SELECT * FROM marcas_distri WHERE CODIGOMARCA IN ({brands})"""
+    else:
+        return f"""SELECT * FROM marcas_distri"""
 getLastUpdateInfo = """SELECT * FROM info_updates ORDER BY created_at DESC LIMIT 1"""
 
 # VPS 69

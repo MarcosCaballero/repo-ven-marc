@@ -74,9 +74,9 @@ def getNewInfoCant():
         res = {}
         # Tomamos la información de las fechas que viene por query params
         month = request.args.get("date")
+        brands = request.args.getlist("brands[]")
         patron = re.compile(r"^\d{4}-\d{2}$")
         if patron.match(month):
-
             # resDb = getDbs()
             # return resDb
             if False:
@@ -84,7 +84,7 @@ def getNewInfoCant():
                 res["error"] = "No se pudo guardar la informacion en la base de datos local"
                 return res
             else: 
-                resInfo = getInformeCantMonth(month)
+                resInfo = getInformeCantMonth(month, brands)
                 if resInfo == False:
                     res["status"] = "error"
                     res["error"] = "No se pudo crear el informe"

@@ -219,7 +219,7 @@ def getInformeCant(condition = ["PPAL", "DS"], dbs = ["DISTRI", "DIMES"]):
         return False
     
 
-def getInformeCantMonth(date):
+def getInformeCantMonth(date,brands = []):
     """
         Esta funcion genera el informe de ventas de los ultimos 6 meses
     """
@@ -260,10 +260,18 @@ def getInformeCantMonth(date):
             year = date[0:4]
             query += f""" SUM(CASE 
            WHEN strftime('%W', cdp2.FECHACOMPROBANTE) = '{week}' AND strftime('%Y', cdp2.FECHACOMPROBANTE) = '{year}' THEN cdp.cantidad
-           ELSE 0 END) AS 'SEMANA Nro {i+1}',"""
+           ELSE 0 END) AS 'SEMANA Nro {i + 1}',"""
         return query[:-1]
+    
+    def getBrandsQuery(brands):
+        strBrands = ""
+        for i in range(len(brands)):
+            strBrands += f"'{brands[i]}',"
 
+        return strBrands[:-1]
 
+    brands = getBrandsQuery(brands)
+    print(brands)
     # def getWeeksCampaign():
     #     resCamp = pd.read_sql(q.getCreatedCampanas(date), con=connLocal)
     #     idCamp = resCamp['id'].values[0]
@@ -280,19 +288,12 @@ def getInformeCantMonth(date):
             print(f"Periodo: {period[0]}")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
             # for dbs in ARR_DBS:
             begin = time()
-            new_data = pd.DataFrame(columns=["CODIGOPARTICULAR", "RAZONSOCIAL",  "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO", "MARGEN"])
-
             # Añadimos las columnas de los meses
             weeks = getWeeks()
-            for i in range(len(weeks)):
-                new_data[f"SEMANA Nro {i}"] = 0
-
-
-            # definimos las columnas del informe final
             columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
             columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
             columns.extend(["MARGEN"])
-
+            new_data = pd.DataFrame(columns=columns)
             # Trabajamos con cada una de las DBs
             for db in dbs:
                 for type in condition:
@@ -314,7 +315,7 @@ def getInformeCantMonth(date):
                     raw_data_clients_discounts = pd.read_sql(q.getAllDescuentosLocal, con=connLocal)
 
                     # Tomamos la data de las marcas
-                    brands_distri = pd.read_sql(q.getAllBrandsDistri, con=connLocal)
+                    brands_distri = pd.read_sql(q.getAllBrandsDistri(brands), con=connLocal)
 
                     # Tomamos la data unica de los clientes que se encuentran en la data previa
                     total_clients = data_previa['CODIGOCLIENTE'].unique()
@@ -324,7 +325,6 @@ def getInformeCantMonth(date):
                         print(i)
                         client_code = total_clients[i]
                         prev_data_client = data_previa[(data_previa['CODIGOCLIENTE'] == client_code)]
-                        #print(prev_data_client)
                         # At least the client has to have one row in data_previa
                         if not prev_data_client.empty:
                             company_name = prev_data_client['RAZONSOCIAL'].values[0]
@@ -373,31 +373,31 @@ def getInformeCantMonth(date):
 
                                     new_data.loc[new_row_id] = new_row
 
-                                    for m in range(len(weeks)):
+                                    for w in range(len(weeks)):
                                         # We get the sales and cost of the client and brand
                                         if not prev_data_client_brand.empty:
                                             # sales = prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] if prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] != None else 0
                                             # cost = prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] if prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] != None else 0
-                                            units = prev_data_client_brand[f'SEMANA Nro {m + 1}'].values[0] if prev_data_client_brand[f'SEMANA Nro {m + 1}'].values[0] != None else 0
+                                            units = prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] if prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] != None else 0
                             
 
-                                            new_data.loc[new_row_id,f'SEMANA Nro {m + 1}'] = units
+                                            new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = units
                                         else: 
-                                            new_data.loc[new_row_id,f'SEMANA Nro {m + 1}'] = 0
+                                            new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = 0
                                 else: 
                                     new_row_id = new_data[(new_data["CODIGOPARTICULAR"]== particular_code) & (new_data["CODIGOMARCA"] == brand)].index[0]                                
 
-                                    for m in range(len(weeks)):
+                                    for w in range(len(weeks)):
                                         # We get the sales and cost of the client and brand
                                         if not prev_data_client_brand.empty:
                                             # sales = prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] if prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] != None else 0
                                             # cost = prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] if prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] != None else 0
-                                            units = prev_data_client_brand[f'SEMANA Nro {m + 1}'].values[0] if prev_data_client_brand[f'SEMANA Nro {m + 1}'].values[0] != None else 0
-                                            prev_units = new_data[(new_data["CODIGOPARTICULAR"]== particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {m + 1}'].values[0] if new_data[(new_data["CODIGOPARTICULAR"]== particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {m + 1}'].values[0] != None else 0
+                                            units = prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] if prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] != None else 0
+                                            prev_units = new_data[(new_data["CODIGOPARTICULAR"]== particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {w + 1}'].values[0] if new_data[(new_data["CODIGOPARTICULAR"] == particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {w + 1}'].values[0] != None else 0
                                             
-                                            new_data.loc[new_row_id,f'SEMANA Nro {m + 1}'] = units + prev_units
+                                            new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = units + prev_units
                                         else: 
-                                            new_data.loc[new_row_id,f'SEMANA Nro {m + 1}'] = 0
+                                            new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = 0
             
             # Change type of columns
             new_data['BONIFICACION'] = new_data['BONIFICACION'].str.replace(',', '.').astype(float)
@@ -407,7 +407,7 @@ def getInformeCantMonth(date):
             if not os.path.exists(ruta):
                 os.makedirs(ruta)
             # Save the info in excel
-            new_data.to_excel(f"ventas/Distrisuper informe ventas.xlsx", engine="openpyxl",  index=False)
+            new_data.to_excel(f"ventas/Distrisuper informe ventas {date}.xlsx", engine="openpyxl",  index=False)
             end = time()
             print(f"Se ha guardado el archivo todo en {end-begin} segundos")
             # response
