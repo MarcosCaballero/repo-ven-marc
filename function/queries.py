@@ -44,14 +44,14 @@ def getDataPrevia(head, body, period = "todo", from_date = "2023-01-01 00:00:00"
             ORDER BY  cd.CODIGOPARTICULAR, md.DESCRIPCION;
             """
 
-def getDataPreviaCant(head, body, datesQuery, period='todo', from_date= "2023-01-01 00:00:00", to_date = "2023-09-05 23:59:59"):
+def getDataPreviaCant(head, body, datesQuery, date, period='todo'):
      return f"""
             SELECT cd.CODIGOPARTICULAR, cd.RAZONSOCIAL, cdp.linea, md.CODIGOMARCA, cd.codigocliente, replace(cd.bonificacion, ".",",") as 'BONIFICACION', md.DESCRIPCION, {datesQuery} FROM {body} cdp 
             join {head} cdp2 on cdp2.NUMEROCOMPROBANTE = cdp.NUMEROCOMPROBANTE -- Metemos cdp2 para sacar info cliente
             join clientes_distri cd on cdp2.CODIGOCLIENTE = cd.CODIGOCLIENTE -- metemos cd para sacar CODIGOPARTICULAR del cliente
             join articulos_distri ad on cdp.CODIGOPARTICULAR = ad.CODIGOPARTICULAR
             LEFT join marcas_distri md on ad.CODIGOMARCA = md.CODIGOMARCA
-            where cdp2.FECHACOMPROBANTE BETWEEN '{from_date}' and '{to_date}' and cd.ACTIVO = 1
+            where cdp2.FECHACOMPROBANTE BETWEEN '{date}-01 00:00:00' and '{date}-31 23:59:59' and cd.ACTIVO = 1
             GROUP BY ad.CODIGOMARCA, cd.CODIGOPARTICULAR
             ORDER BY  cd.CODIGOPARTICULAR, md.DESCRIPCION;
         """
