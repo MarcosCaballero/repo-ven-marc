@@ -20,7 +20,7 @@ ARR_DBS = {
                 }
             }  
 
-periods = [["ultimos_30_dias", "2023-09-01 00:00:00", "2023-10-31 23:59:59"]]
+periods = [["ultimos_30_dias", "2023-10-01 00:00:00", "2023-11-31 23:59:59"]]
 
     
 meses_espanol = [
@@ -302,7 +302,7 @@ def getInformeCantMonth(date,brands = []):
                     
                     # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks,  period=period[0].upper(), from_date=period[1], to_date=period[2]))
                     # Tomamos la data de la DBs
-                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, period=period[0].upper(), from_date=period[1], to_date=period[2]), con=connLocal)
+                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, period=period[0].upper()), con=connLocal)
                     markups = pd.read_sql(q.getMarkups, con=connLocal)
                     # Cambiamos el tipo de dato de las columnas
                     data_previa['CODIGOMARCA'] = data_previa['CODIGOMARCA'].astype(str)
@@ -407,7 +407,8 @@ def getInformeCantMonth(date,brands = []):
             if not os.path.exists(ruta):
                 os.makedirs(ruta)
             # Save the info in excel
-            new_data.to_excel(f"ventas/Distrisuper informe ventas {date}.xlsx", engine="openpyxl",  index=False)
+            filename = f"ventas/Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
+            new_data.to_excel(f"{filename}", engine="openpyxl",  index=False)
             end = time()
             print(f"Se ha guardado el archivo todo en {end-begin} segundos")
             # response
@@ -416,11 +417,9 @@ def getInformeCantMonth(date,brands = []):
             connLocal.execute(stmt)
             connLocal.commit()
             # get the last item
-            res = pd.read_sql(q.getLastUpdateInfo, con=connLocal)
-            res = res.to_dict(orient="records")[0]
             connLocal.close()
             
-            return res
+            return {"ok": 1, "data": filename}
 
     except Exception as e:
         print(e)
