@@ -13,8 +13,8 @@ def getLastInfoUpdate():
         if res.empty:
             return {"message": f"No hay historial de informes en la base de datos local. Crea un primer informe precionando crear informe."}
         res = res.to_dict(orient="records")[0]
-        return res
+        return {"ok": 1, "data": res}
     except Exception as e:
-        return {"error": str(e)}
+        return {"ok": 0, "error": {"detail": str(e)}}
     
     
