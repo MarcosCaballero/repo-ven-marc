@@ -25,50 +25,62 @@ def home():
         res = {}
         # Devolvemos los estados de la aplicacion
         res = getLastInfoUpdate()
-        if res == None:
+        if res["ok"] == 0:
             res = {}
-            res["status"] = "error"
-            res["error"] = "No se pudo obtener el estado de la aplicacion"
+            res["ok"] = 0
+            res["error"] = {"details": "No se pudo obtener el estado de la aplicacion"}
             return res
         return res 
     except Exception as e:
         Notifier("Error al obtener el estado de la aplicacion")
         res = {}
-        res["status"] = "error"
-        res["error"] = str(e)
+        res["ok"] = 0
+        res["error"] = {"details": str(e)}
         return res
     
-@app.route("/getNewInfo")
-def getNewInfo():
+@app.route("/update-db")
+def updateDb():
     try:
         res = {}
-        # 1. tomamos los datos de la base de datos de flxx
+        # 1. Tomamos los datos de la base de datos de flxx
         resDb = getDbs()
         # 2. Los guardamos en la base de datos local
         if resDb == None:
-            res["status"] = "Error"
-            res["error"] = "No se pudo guardar la informacion en la base de datos local"
+            res["ok"] = 0
+            res["error"] = {"details": "No se pudo guardar la informacion en la base de datos local" }
             return res
         else:
-            resInfo = getInforme()
-            if resInfo == False:
-                res["status"] = "error"
-                res["error"] = "No se pudo crear el informe"
-                return res
-            else:
-                res["status"] = "success"
-                res["message"] = "Se creo el informe correctamente"
-                return res
-            
+            res["ok"] = 1
+            res["data"] = "Se guardo la informacion correctamente"
+            return res
+    except Exception as e:
+        Notifier("Error al actualizar la base de datos")
+        res = {}
+        res["ok"] = 0
+        res["error"] = {"details": str(e)}
+        return res
+
+@app.route("/get-new-info")
+def getNewInfo():
+    try:
+        resInfo = getInforme()
+        if resInfo == False:
+            res["ok"] = 0
+            res["error"] = {"details": "No se pudo crear el informe"}
+            return res
+        else:
+            res["ok"] = 1
+            res["data"] = "Se creo el informe correctamente"
+            return res
     except Exception as e:
         Notifier("Error al obtener el nuevo informe")
     # Hay que renderizar la pantalla de errores y mandarle el error correspondiente
         res = {}
-        res["status"] = "error"
-        res["error"] = str(e)
+        res["ok"] = 0
+        res["error"] = {"details": str(e)}
         return res
 
-@app.route("/getNewInfoCant", methods=["GET"])
+@app.route("/new-info-cant", methods=["GET"])
 def getNewInfoCant():
     try:
         res = {}
@@ -77,29 +89,13 @@ def getNewInfoCant():
         brands = request.args.getlist("brands[]")
         patron = re.compile(r"^\d{4}-\d{2}$")
         if patron.match(month):
-            # resDb = getDbs()
-            # return resDb
-            if False:
-                res["status"] = "Error"
-                res["error"] = "No se pudo guardar la informacion en la base de datos local"
-                return res
-            else: 
-                resInfo = getInformeCantMonth(month, brands)
-                if resInfo == False:
-                    res["status"] = "error"
-                    res["error"] = "No se pudo crear el informe"
-                    return res
-                else:
-                    res["status"] = "success"
-                    res["message"] = "Se creo el informe correctamente"
-                    return res
-            # return resDb
+            resInfo = getInformeCantMonth(month, brands)
+            return resInfo
     except Exception as e:
         # Notifier("Error al obtener el nuevo informe de cantidades")
         res = {}
-        res["status"] = "error"
-        res["error"] = str(e)
-        print(e)
+        res["ok"] = 0
+        res["error"] = {"details": str(e)}
         return res
 
 
@@ -114,9 +110,9 @@ def getLastInfo():
             return path
             # return send_file(filename, as_attachment=True)
         else:
-            return {"status": "error", "error": "No hay informes disponibles. Debe generar uno nuevo."}
+            return {"ok": 0, "error": {"details": "No se encontro el archivo"}}
     except Exception as e:
         Notifier("Error al descargar el último informe")
-        return str(e)
+        return {"ok": 0, "error": {"details": str(e)}}
 
 waitress.serve(app, port=8045, host='127.0.0.1')
