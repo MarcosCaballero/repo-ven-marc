@@ -44,14 +44,19 @@ def getDataPrevia(head, body, period = "todo", from_date = "2023-01-01 00:00:00"
             ORDER BY  cd.CODIGOPARTICULAR, md.DESCRIPCION;
             """
 
-def getDataPreviaCant(head, body, datesQuery, date, period='todo'):
+def getDataPreviaCant(head, body, datesQuery, date, pp, period='todo'):
      return f"""
-            SELECT cd.CODIGOPARTICULAR, cd.RAZONSOCIAL, cdp.linea, md.CODIGOMARCA, cd.codigocliente, replace(cd.bonificacion, ".",",") as 'BONIFICACION', md.DESCRIPCION, {datesQuery} FROM {body} cdp 
+            SELECT cd.CODIGOPARTICULAR, cd.RAZONSOCIAL, cdp.linea, md.CODIGOMARCA, cd.codigocliente, replace(cd.bonificacion, '.',',') as 'BONIFICACION', {pp * 100} as 'PP', md.DESCRIPCION, {datesQuery}, 
+            SUM(cdp.cantidad) AS 'TOTAL UNIDADES',
+            ((sum(cdp.PRECIOTOTAL) * {1 - pp}) / 1000) AS 'VENTAS', 
+            (sum(cdp.COSTOVENTA) / 1000) AS 'COSTOS',
+            IFNULL(((sum(cdp.PRECIOTOTAL) * {1 - pp}) - sum(cdp.COSTOVENTA)) / (sum(cdp.PRECIOTOTAL) * {1 - pp}) * 100, 0) as 'RENTABILIDAD'
+            FROM {body} cdp 
             join {head} cdp2 on cdp2.NUMEROCOMPROBANTE = cdp.NUMEROCOMPROBANTE -- Metemos cdp2 para sacar info cliente
             join clientes_distri cd on cdp2.CODIGOCLIENTE = cd.CODIGOCLIENTE -- metemos cd para sacar CODIGOPARTICULAR del cliente
             join articulos_distri ad on cdp.CODIGOPARTICULAR = ad.CODIGOPARTICULAR
             LEFT join marcas_distri md on ad.CODIGOMARCA = md.CODIGOMARCA
-            where cdp2.FECHACOMPROBANTE BETWEEN '{date}-01 00:00:00' and '{date}-31 23:59:59' and cd.ACTIVO = 1
+            where cdp2.FECHACOMPROBANTE BETWEEN '{date}-01 00:00:00' and '{date}-31 23:59:59' and cd.ACTIVO = 1 and cd.RAZONSOCIAL NOT LIKE '%EXCEL%'
             GROUP BY ad.CODIGOMARCA, cd.CODIGOPARTICULAR
             ORDER BY  cd.CODIGOPARTICULAR, md.DESCRIPCION;
         """

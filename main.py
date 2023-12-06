@@ -18,6 +18,8 @@ import re
 app = Flask(__name__)
 
 CORS(app)
+UPLOAD_FOLDER = 'ventas'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route("/")
 def home():
@@ -86,10 +88,12 @@ def getNewInfoCant():
         res = {}
         # Tomamos la información de las fechas que viene por query params
         month = request.args.get("date")
+        pp = int(request.args.get("pp"))
+        phone = request.args.getlist("phone[]")
         brands = request.args.getlist("brands[]")
         patron = re.compile(r"^\d{4}-\d{2}$")
         if patron.match(month):
-            resInfo = getInformeCantMonth(month, brands)
+            resInfo = getInformeCantMonth(month, phone, brands, pp)
             return resInfo
     except Exception as e:
         # Notifier("Error al obtener el nuevo informe de cantidades")
@@ -99,20 +103,51 @@ def getNewInfoCant():
         return res
 
 
-@app.route("/getLastInfo") 
-def getLastInfo():
+@app.route("/download-info-cant") 
+def downloadInfo():
     try:
-        filename = "ventas/Distrisuper informe ventas.xlsx"
-        # chequear si el archivo existe
-        # obtener el path completo del archivo
-        path = os.path.abspath(filename)
+        # Obtener el nombre del archivo desde los parámetros de la solicitud
+        file = request.args.get("filename")
+
+        # Construir la ruta completa del archivo
+        filename = os.path.join(app.config['UPLOAD_FOLDER'], file)
+
+        print(filename)
+
+        # Verificar si el archivo existe y tiene la extensión .xlsx
         if os.path.isfile(filename):
-            return path
-            # return send_file(filename, as_attachment=True)
+            return send_file(filename, as_attachment=True)
         else:
-            return {"ok": 0, "error": {"details": "No se encontro el archivo"}}
+            return {"ok": 0, "error": {"details": "No se encontraron archivos"}}
+        
+    except Exception as e:
+        print(e)
+        Notifier("Error al descargar el último informe")
+        return {"ok": 0, "error": {"details": str(e)}}
+
+
+@app.route("/inform-list") 
+def getInfoList():
+    try:
+        filename = "ventas/"
+        archivos = os.listdir(filename)
+        archivos_con_fecha = [(archivo, os.path.getmtime(os.path.join(filename, archivo))) for archivo in archivos]
+        archivos_ordenados = []
+
+        for archivo in archivos_con_fecha:
+            if archivo[0].startswith("Informe"):
+                archivos_ordenados.append(archivo)
+
+
+        if len(archivos_ordenados) > 0:
+            return {"ok": 1, "data": archivos_ordenados}
+        else:
+            return {"ok": 0, "error": {"details": "No se encontraron archivos"}}
+        
     except Exception as e:
         Notifier("Error al descargar el último informe")
         return {"ok": 0, "error": {"details": str(e)}}
+
+        
 
 waitress.serve(app, port=8045, host='127.0.0.1')

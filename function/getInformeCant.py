@@ -8,6 +8,7 @@ from sqlalchemy import text
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import calendar
+from helpers.Notifier import Notifier
 
 ARR_DBS = {
                 "DISTRI": {
@@ -219,7 +220,7 @@ def getInformeCant(condition = ["PPAL", "DS"], dbs = ["DISTRI", "DIMES"]):
         return False
     
 
-def getInformeCantMonth(date,brands = []):
+def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
     """
         Esta funcion genera el informe de ventas de los ultimos 6 meses
     """
@@ -281,7 +282,6 @@ def getInformeCantMonth(date,brands = []):
     #         weeks = resCamp['created_at'].values[i]
     #         cal = calendar.monthcalendar(int(date[0:4]), int(date[5:7]))
         
-
     try:
         query_weeks = getWeeksQuery(getWeeks())
         for period in periods:
@@ -290,24 +290,30 @@ def getInformeCantMonth(date,brands = []):
             begin = time()
             # Añadimos las columnas de los meses
             weeks = getWeeks()
-            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
+            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "PP", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
             columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
-            columns.extend(["MARGEN"])
+            columns.extend(["TOTAL UNIDADES", "VENTAS", "COSTOS", "RENTABILIDAD","MARGEN"])
             new_data = pd.DataFrame(columns=columns)
             # Trabajamos con cada una de las DBs
+            all_total_units = 0
+            all_sales = 0
+            all_cost = 0
+            all_rent = 0
+            coef_pp = 1 - pp
             for db in dbs:
                 for type in condition:
                     db_params = ARR_DBS[db][type]
                     print(f"Base de datos: {db_params[0]}")
                     
-                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks,  period=period[0].upper(), from_date=period[1], to_date=period[2]))
                     # Tomamos la data de la DBs
-                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, period=period[0].upper()), con=connLocal)
+                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, pp, period=period[0].upper()))
+                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, pp, period=period[0].upper()), con=connLocal)
                     markups = pd.read_sql(q.getMarkups, con=connLocal)
                     # Cambiamos el tipo de dato de las columnas
                     data_previa['CODIGOMARCA'] = data_previa['CODIGOMARCA'].astype(str)
                     data_previa['RAZONSOCIAL'] = data_previa['RAZONSOCIAL'].astype(str)
                     markups['CODIGOMARCA'] = markups['CODIGOMARCA'].astype(str)
+                    
                     # Borramos las columnas vacias
                     data_previa = data_previa.dropna()
                     
@@ -337,12 +343,20 @@ def getInformeCantMonth(date,brands = []):
                                 # INITIALIZE VARIABLES
                                 discount = 0
                                 margin = 0
+                                total_units = 0
+                                costo = 0
+                                venta = 0
+                                rentabilidad = 0
 
                                 brand = brands_distri.loc[j, "CODIGOMARCA"]
                                 brand_desc = brands_distri.loc[j, "DESCRIPCION"]
                                 # We get the data of the client and the brand of prev_data_client if exists we get the data 
                                 # and we add it to new_data, if not we add a row with 0 in sales and cost
                                 prev_data_client_brand = prev_data_client[(prev_data_client['CODIGOMARCA'] == brand)]
+                                total_units = prev_data_client_brand['TOTAL UNIDADES'].values[0] if not prev_data_client_brand.empty else 0
+                                costo = prev_data_client_brand['COSTOS'].values[0] if not prev_data_client_brand.empty else 0
+                                venta = prev_data_client_brand['VENTAS'].values[0] if not prev_data_client_brand.empty else 0
+                                rentabilidad = prev_data_client_brand['RENTABILIDAD'].values[0] if not prev_data_client_brand.empty else 0
 
                                 if not discounts.empty:
                                     discount_brand = discounts[(discounts['CODIGOMARCA'] == brand)]
@@ -360,14 +374,21 @@ def getInformeCantMonth(date,brands = []):
                                     # id de fila nueva 
                                     new_row_id = len(new_data)
                                     
+                                    all_total_units += total_units
+
                                     new_row = {
                                         "CODIGOPARTICULAR": "{:05}".format(particular_code),
                                         "RAZONSOCIAL": company_name,
                                         "BONIFICACION": bonfication,
+                                        "PP": pp * 100,
                                         "CODIGOMARCA": "{:03}".format(brand) if brand != '80' else brand,
                                         "CODIGOCLIENTE": "{:05}".format(client_code),
                                         "DESCRIPCION": brand_desc,
                                         "PORCENTAJEDESCUENTO": discount, 
+                                        "TOTAL UNIDADES": total_units,
+                                        "VENTAS": venta,
+                                        "COSTOS": costo,
+                                        "RENTABILIDAD": rentabilidad,
                                         "MARGEN": margin
                                     }
 
@@ -379,13 +400,21 @@ def getInformeCantMonth(date,brands = []):
                                             # sales = prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] if prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] != None else 0
                                             # cost = prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] if prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] != None else 0
                                             units = prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] if prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] != None else 0
-                            
 
                                             new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = units
                                         else: 
                                             new_data.loc[new_row_id,f'SEMANA Nro {w + 1}'] = 0
                                 else: 
                                     new_row_id = new_data[(new_data["CODIGOPARTICULAR"]== particular_code) & (new_data["CODIGOMARCA"] == brand)].index[0]                                
+
+                                    all_total_units += total_units
+
+                                    new_data.loc[new_row_id, "TOTAL UNIDADES"] += total_units
+                                    new_data.loc[new_row_id, "VENTAS"] += venta 
+                                    new_data.loc[new_row_id, "COSTOS"] += costo
+                                    # Recalculamos la nueva rentabilidad
+                                    if(venta > 0 or costo > 0): # Si la venta o el costo es 0 entonces la rentabilidad sigue igual
+                                        new_data.loc[new_row_id, "RENTABILIDAD"] = (new_data.loc[new_row_id, "VENTAS"] -  new_data.loc[new_row_id, "COSTOS"]) /  new_data.loc[new_row_id, "VENTAS"] * 100 
 
                                     for w in range(len(weeks)):
                                         # We get the sales and cost of the client and brand
@@ -402,13 +431,23 @@ def getInformeCantMonth(date,brands = []):
             # Change type of columns
             new_data['BONIFICACION'] = new_data['BONIFICACION'].str.replace(',', '.').astype(float)
 
+            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO", "PP"]
+            columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
+            columns.extend(["TOTAL UNIDADES", "VENTAS", "COSTOS", "RENTABILIDAD","MARGEN"])
+
             new_data = new_data[columns]
             ruta = os.path.join(os.getcwd(), 'ventas'+"/"+period[0])
             if not os.path.exists(ruta):
                 os.makedirs(ruta)
             # Save the info in excel
-            filename = f"ventas/Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
-            new_data.to_excel(f"{filename}", engine="openpyxl",  index=False)
+            filename = f"Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
+            
+            new_data.to_excel(f"ventas/{filename}", engine="openpyxl",  index=False)
+            print(f"Total unidades {all_total_units}")
+            print(f"Total ventas {all_sales}")
+            print(f"Total costos {all_cost}")
+            print(f"Total rentabilidad {all_rent}")
+            Notifier(f"Su informe fue generado con exito. Descarguelo con el nombre de Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx", phone)           
             end = time()
             print(f"Se ha guardado el archivo todo en {end-begin} segundos")
             # response
