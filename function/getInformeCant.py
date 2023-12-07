@@ -306,7 +306,7 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], ppv = 0.17
                     print(f"Base de datos: {db_params[0]}")
                     
                     # Tomamos la data de la DBs
-                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, ppv, ppc period=period[0].upper()))
+                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, ppv, ppc, period=period[0].upper()))
                     data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, ppv, ppc, period=period[0].upper()), con=connLocal)
                     markups = pd.read_sql(q.getMarkups, con=connLocal)
                     # Cambiamos el tipo de dato de las columnas
@@ -414,8 +414,8 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], ppv = 0.17
                                     new_data.loc[new_row_id, "VENTAS"] += venta 
                                     new_data.loc[new_row_id, "COSTOS"] += costo
                                     # Recalculamos la nueva rentabilidad
-                                    if(venta > 0 or costo > 0): # Si la venta o el costo es 0 entonces la rentabilidad sigue igual
-                                        new_data.loc[new_row_id, "RENTABILIDAD"] = (new_data.loc[new_row_id, "VENTAS"] -  new_data.loc[new_row_id, "COSTOS"]) /  new_data.loc[new_row_id, "VENTAS"] * 100 
+                                    if(venta > 0 and costo > 0): # Si la venta o el costo es 0 entonces la rentabilidad sigue igual
+                                        new_data.loc[new_row_id, "RENTABILIDAD"] = ((new_data.loc[new_row_id, "VENTAS"] -  new_data.loc[new_row_id, "COSTOS"]) /  new_data.loc[new_row_id, "VENTAS"]) * 100 
 
                                     for w in range(len(weeks)):
                                         # We get the sales and cost of the client and brand
