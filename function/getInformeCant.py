@@ -220,7 +220,7 @@ def getInformeCant(condition = ["PPAL", "DS"], dbs = ["DISTRI", "DIMES"]):
         return False
     
 
-def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
+def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], ppv = 0.17, ppc = 0):
     """
         Esta funcion genera el informe de ventas de los ultimos 6 meses
     """
@@ -290,7 +290,7 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
             begin = time()
             # Añadimos las columnas de los meses
             weeks = getWeeks()
-            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "PP", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
+            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "PPV", "PPC", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
             columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
             columns.extend(["TOTAL UNIDADES", "VENTAS", "COSTOS", "RENTABILIDAD","MARGEN"])
             new_data = pd.DataFrame(columns=columns)
@@ -299,15 +299,15 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
             all_sales = 0
             all_cost = 0
             all_rent = 0
-            coef_pp = 1 - pp
+            coef_ppv = 1 - ppv
             for db in dbs:
                 for type in condition:
                     db_params = ARR_DBS[db][type]
                     print(f"Base de datos: {db_params[0]}")
                     
                     # Tomamos la data de la DBs
-                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, pp, period=period[0].upper()))
-                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, pp, period=period[0].upper()), con=connLocal)
+                    # print(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, ppv, ppc period=period[0].upper()))
+                    data_previa = pd.read_sql(q.getDataPreviaCant(db_params[1], db_params[2], query_weeks, date, ppv, ppc, period=period[0].upper()), con=connLocal)
                     markups = pd.read_sql(q.getMarkups, con=connLocal)
                     # Cambiamos el tipo de dato de las columnas
                     data_previa['CODIGOMARCA'] = data_previa['CODIGOMARCA'].astype(str)
@@ -380,7 +380,8 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
                                         "CODIGOPARTICULAR": "{:05}".format(particular_code),
                                         "RAZONSOCIAL": company_name,
                                         "BONIFICACION": bonfication,
-                                        "PP": pp * 100,
+                                        "PPV": ppv * 100,
+                                        "PPC": ppc * 100,
                                         "CODIGOMARCA": "{:03}".format(brand) if brand != '80' else brand,
                                         "CODIGOCLIENTE": "{:05}".format(client_code),
                                         "DESCRIPCION": brand_desc,
@@ -431,7 +432,7 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
             # Change type of columns
             new_data['BONIFICACION'] = new_data['BONIFICACION'].str.replace(',', '.').astype(float)
 
-            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO", "PP"]
+            columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO", "PPV", "PPC"]
             columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
             columns.extend(["TOTAL UNIDADES", "VENTAS", "COSTOS", "RENTABILIDAD","MARGEN"])
 
@@ -441,24 +442,25 @@ def getInformeCantMonth(date, phone = ['5492235385084'], brands = [], pp = 0):
                 os.makedirs(ruta)
             # Save the info in excel
             filename = f"Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
-            
+            res = {}
+            res['ok'] = 1
+            res['data'] = filename
             new_data.to_excel(f"ventas/{filename}", engine="openpyxl",  index=False)
             print(f"Total unidades {all_total_units}")
             print(f"Total ventas {all_sales}")
             print(f"Total costos {all_cost}")
             print(f"Total rentabilidad {all_rent}")
-            Notifier(f"Su informe fue generado con exito. Descarguelo con el nombre de Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx", phone)           
+            Notifier(f"Su informe fue generado con exito. Descarguelo con el nombre de {filename}", phone)           
             end = time()
             print(f"Se ha guardado el archivo todo en {end-begin} segundos")
+            return res
             # response
-            connLocal = connectionConfig().connect()
-            stmt = text("INSERT INTO info_updates (status) VALUES ('Terminado')")
-            connLocal.execute(stmt)
-            connLocal.commit()
-            # get the last item
-            connLocal.close()
-            
-            return {"ok": 1, "data": filename}
+            #connLocal = connectionConfig().connect()
+            #stmt = text("INSERT INTO info_updates (status) VALUES ('Terminado')")
+            #connLocal.execute(stmt)
+            #connLocal.commit()
+            ## get the last item
+            #connLocal.close()
 
     except Exception as e:
         print(e)

@@ -11,15 +11,14 @@ from flask_cors import CORS
 import waitress
 from helpers.Notifier import Notifier
 
-from flask import Flask, send_file, request
+from flask import Flask, send_file, request, jsonify
 from sqlalchemy import text
 import re 
+import base64
 
 app = Flask(__name__)
 
 CORS(app)
-UPLOAD_FOLDER = 'ventas'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route("/")
 def home():
@@ -72,7 +71,7 @@ def getNewInfo():
             return res
         else:
             res["ok"] = 1
-            res["data"] = "Se creo el informe correctamente"
+            res["data"] = resInfo
             return res
     except Exception as e:
         Notifier("Error al obtener el nuevo informe")
@@ -88,15 +87,17 @@ def getNewInfoCant():
         res = {}
         # Tomamos la información de las fechas que viene por query params
         month = request.args.get("date")
-        pp = int(request.args.get("pp"))
+        ppv = 0.2 #float(request.args.get("ppv"))
+        ppc = 0 #float(request.args.get("ppc"))
         phone = request.args.getlist("phone[]")
         brands = request.args.getlist("brands[]")
         patron = re.compile(r"^\d{4}-\d{2}$")
         if patron.match(month):
-            resInfo = getInformeCantMonth(month, phone, brands, pp)
+            resInfo = getInformeCantMonth(month, phone, brands, ppv, ppc)
             return resInfo
     except Exception as e:
         # Notifier("Error al obtener el nuevo informe de cantidades")
+        print(e)
         res = {}
         res["ok"] = 0
         res["error"] = {"details": str(e)}
@@ -106,18 +107,22 @@ def getNewInfoCant():
 @app.route("/download-info-cant") 
 def downloadInfo():
     try:
-        # Obtener el nombre del archivo desde los parámetros de la solicitud
         file = request.args.get("filename")
+        ruta_xlsx = f'ventas/{file}'
 
-        # Construir la ruta completa del archivo
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], file)
+        filename = os.path.join("ventas", file)
 
-        print(filename)
+        if os.path.isfile(filename):            
+            # Lee el contenido del archivo XLSX
+            with open(ruta_xlsx, 'rb') as file:
+                contenido_xlsx = file.read()
 
-        # Verificar si el archivo existe y tiene la extensión .xlsx
-        if os.path.isfile(filename):
-            return send_file(filename, as_attachment=True)
-        else:
+            # Codifica el contenido a base64
+            base64_xlsx = base64.b64encode(contenido_xlsx).decode('utf-8')
+
+            # Devuelve el base64 como respuesta JSON
+            return jsonify({'ok': 1, 'data': base64_xlsx})
+        else: 
             return {"ok": 0, "error": {"details": "No se encontraron archivos"}}
         
     except Exception as e:
@@ -145,6 +150,7 @@ def getInfoList():
             return {"ok": 0, "error": {"details": "No se encontraron archivos"}}
         
     except Exception as e:
+        print(e)
         Notifier("Error al descargar el último informe")
         return {"ok": 0, "error": {"details": str(e)}}
 
