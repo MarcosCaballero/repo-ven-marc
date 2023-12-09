@@ -50,7 +50,7 @@ def getDataPreviaCant(head, body, datesQuery, date, ppv, ppc, period='todo'):
             SUM(cdp.cantidad) AS 'TOTAL UNIDADES',
             (((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv}) / 1000) AS 'VENTAS', 
             ((sum(cdp.COSTOVENTA) * {1 - ppc}) / 1000) AS 'COSTOS',
-            IFNULL((((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100)) * {1 - ppv}) - (sum(cdp.COSTOVENTA * {1 - ppc}))) / (sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv}) * 100, 0) as 'RENTABILIDAD'
+            IFNULL((((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100)) * {1 - ppv}) - (sum(cdp.COSTOVENTA * {1 - ppc}))) / ((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv})) * 100, 0) as 'RENTABILIDAD'
             FROM {body} cdp 
             join {head} cdp2 on cdp2.NUMEROCOMPROBANTE = cdp.NUMEROCOMPROBANTE -- Metemos cdp2 para sacar info cliente
             join clientes_distri cd on cdp2.CODIGOCLIENTE = cd.CODIGOCLIENTE -- metemos cd para sacar CODIGOPARTICULAR del cliente
@@ -91,7 +91,7 @@ getAllDescuentosDistri = """SELECT * FROM DESCUENTOCLIENTESMARCAS d """ # ✅
     # ARTICULOS
 getAllArticulosDistri = """SELECT * FROM ARTICULOS a WHERE a.ACTIVO = 1""" # ✅
 # VENTAS DE DISTRI PPAL
-start_date = "2023-01-01 00:00:00"
+start_date = "2022-01-01 00:00:00"
 
 getAllCabezaComprobantesDistriPPAL = f"""SELECT c.TIPOCOMPROBANTE, c.NUMEROCOMPROBANTE, c.CODIGOCLIENTE, c.FECHACOMPROBANTE, c.PORCIVA1, c.iva1, c.TOTAL, c.pagado, c.TIPOIVA, c.COMPRA, c.EXENTO, c.DESCUENTOPORCENTAJE, c.DESCUENTOMONTO FROM CABEZACOMPROBANTES c WHERE  c.FECHACOMPROBANTE BETWEEN '{start_date}' AND CURRENT_TIMESTAMP AND c.TIPOCOMPROBANTE IN ('FA', 'FB', 'NCA', 'NCB')"""
 getAllCuerpoComprobantesDistriPPAL = f"""SELECT c.TIPOCOMPROBANTE, c.NUMEROCOMPROBANTE, c.LINEA, c.CODIGOARTICULO, c.PRECIOTOTAL, c.FECHAMODIFICACION, c.CODIGOPARTICULAR, c.CANTIDAD, c.costoventa, c.DESCUENTO FROM cuerpocomprobantes c WHERE c.FECHAMODIFICACION BETWEEN '{start_date}' AND CURRENT_TIMESTAMP AND c.TIPOCOMPROBANTE IN ('FA', 'FB', 'NCA', 'NCB')"""
