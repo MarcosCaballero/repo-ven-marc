@@ -261,7 +261,8 @@ def getInformeCantMonth(date, phone=['5492235385084'], brands=[], ppv=0.17, ppc=
             year = date[0:4]
             query += f""" SUM(CASE 
            WHEN strftime('%W', cdp2.FECHACOMPROBANTE) = '{week}' AND strftime('%Y', cdp2.FECHACOMPROBANTE) = '{year}' THEN cdp.cantidad
-           ELSE 0 END) AS 'SEMANA Nro {i + 1}',"""
+           ELSE 0 END) AS 'SEMANA {i + 1}',
+           IFNULL(AVG(CASE WHEN strftime('%W', cdp2.FECHACOMPROBANTE) = '{week}' AND strftime('%Y', cdp2.FECHACOMPROBANTE) = '{year}' THEN cdp.DESCUENTO ELSE NULL END), 0) AS 'DESC SEMANA {i + 1}',"""
         return query[:-1]
 
     def getBrandsQuery(brands):
@@ -290,11 +291,14 @@ def getInformeCantMonth(date, phone=['5492235385084'], brands=[], ppv=0.17, ppc=
             begin = time()
             # Añadimos las columnas de los meses
             weeks = getWeeks()
+            colWeeks = ([f"SEMANA {i + 1}", f"DESC SEMANA {i + 1}"] for i in range(len(weeks)))
+            colWeeks = [item for sublist in colWeeks for item in sublist]
             columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "PPV", "PPC",
                        "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO"]
-            columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
+            columns.extend(colWeeks)
             columns.extend(["TOTAL UNIDADES", "VENTAS",
                            "COSTOS", "RENTABILIDAD", "MARGEN"])
+            
             new_data = pd.DataFrame(columns=columns)
             markups = pd.read_sql(q.getMarkups, con=connLocal)
             markups['CODIGOMARCA'] = markups['CODIGOMARCA'].astype(str)
@@ -421,14 +425,16 @@ def getInformeCantMonth(date, phone=['5492235385084'], brands=[], ppv=0.17, ppc=
                                     if not prev_data_client_brand.empty:
                                         # sales = prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] if prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] != None else 0
                                         # cost = prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] if prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] != None else 0
-                                        units = prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[
-                                            0] if prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] != None else 0
+                                        units = prev_data_client_brand[f'SEMANA {w + 1}'].values[0] if prev_data_client_brand[f'SEMANA {w + 1}'].values[0] != None else 0
+                                        descBrand = prev_data_client_brand[f'DESC SEMANA {w + 1}'].values[0] if prev_data_client_brand[f'DESC SEMANA {w + 1}'].values[0] != None else 0
 
                                         new_data.loc[new_row_id,
-                                                     f'SEMANA Nro {w + 1}'] = units
+                                                     f'SEMANA {w + 1}'] = units
+                                        new_data.loc[new_row_id, f'DESC SEMANA {w + 1}'] = descBrand
                                     else:
                                         new_data.loc[new_row_id,
-                                                     f'SEMANA Nro {w + 1}'] = 0
+                                                     f'SEMANA {w + 1}'] = 0
+                                        new_data.loc[new_row_id, f'DESC SEMANA {w + 1}'] = 0
                             else:
                                 new_row_id = new_data[(new_data["CODIGOPARTICULAR"] == particular_code) & (
                                     new_data["CODIGOMARCA"] == brand)].index[0]
@@ -451,22 +457,27 @@ def getInformeCantMonth(date, phone=['5492235385084'], brands=[], ppv=0.17, ppc=
                                     if not prev_data_client_brand.empty:
                                         # sales = prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] if prev_data_client_brand[f'VENTAS_{period[0].upper()}'].values[0] != None else 0
                                         # cost = prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] if prev_data_client_brand[f'COSTO_{period[0].upper()}'].values[0] != None else 0
-                                        units = prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[
-                                            0] if prev_data_client_brand[f'SEMANA Nro {w + 1}'].values[0] != None else 0
-                                        prev_units = new_data[(new_data["CODIGOPARTICULAR"] == particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {w + 1}'].values[0] if new_data[(
-                                            new_data["CODIGOPARTICULAR"] == particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA Nro {w + 1}'].values[0] != None else 0
+                                        units = prev_data_client_brand[f'SEMANA {w + 1}'].values[
+                                            0] if prev_data_client_brand[f'SEMANA {w + 1}'].values[0] != None else 0
+                                        prev_units = new_data[(new_data["CODIGOPARTICULAR"] == particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA {w + 1}'].values[0] if new_data[(
+                                            new_data["CODIGOPARTICULAR"] == particular_code) & (new_data["CODIGOMARCA"] == brand)][f'SEMANA {w + 1}'].values[0] != None else 0
+                                        descBrand = prev_data_client_brand[f'DESC SEMANA {w + 1}'].values[0] if prev_data_client_brand[f'DESC SEMANA {w + 1}'].values[0] != None else 0
 
                                         new_data.loc[new_row_id,
-                                                     f'SEMANA Nro {w + 1}'] = prev_units + units
+                                                     f'SEMANA {w + 1}'] = prev_units + units
+                                        new_data.loc[new_row_id,
+                                                     f'DESC SEMANA {w + 1}'] = descBrand
                                     else:
                                         new_data.loc[new_row_id,
-                                                     f'SEMANA Nro {w + 1}'] = 0
+                                                     f'SEMANA {w + 1}'] = 0
+                                        new_data.loc[new_row_id,
+                                                        f'DESC SEMANA {w + 1}'] = 0
             
             # Change type of columns
             new_data['BONIFICACION'] = new_data['BONIFICACION'].str.replace(',', '.').astype(float)
 
             columns = ["CODIGOPARTICULAR", "RAZONSOCIAL", "BONIFICACION", "CODIGOMARCA", "CODIGOCLIENTE", "DESCRIPCION", "PORCENTAJEDESCUENTO", "PPV", "PPC"]
-            columns.extend(f"SEMANA Nro {i + 1}" for i in range(len(weeks)))
+            columns.extend(colWeeks)
             columns.extend(["TOTAL UNIDADES", "VENTAS", "COSTOS", "RENTABILIDAD","MARGEN"])
 
             new_data = new_data[columns]
@@ -474,7 +485,7 @@ def getInformeCantMonth(date, phone=['5492235385084'], brands=[], ppv=0.17, ppc=
             if not os.path.exists(ruta):
                 os.makedirs(ruta)
             # Save the info in excel
-            filename = f"Distrisuper informe ventas {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
+            filename = f"Informe rent x cli x marc {date} - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.xlsx"
             res = {}
             res['ok'] = 1
             res['data'] = filename

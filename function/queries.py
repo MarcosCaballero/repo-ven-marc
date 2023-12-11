@@ -50,7 +50,7 @@ def getDataPreviaCant(head, body, datesQuery, date, ppv, ppc, period='todo'):
             SUM(cdp.cantidad) AS 'TOTAL UNIDADES',
             (((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv}) / 1000) AS 'VENTAS', 
             ((sum(cdp.COSTOVENTA) * {1 - ppc}) / 1000) AS 'COSTOS',
-            IFNULL((((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100)) * {1 - ppv}) - (sum(cdp.COSTOVENTA * {1 - ppc}))) / ((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv})) * 100, 0) as 'RENTABILIDAD'
+            IFNULL(((((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv}) - (sum(cdp.COSTOVENTA * {1 - ppc}))) / ((sum(cdp.PRECIOTOTAL) * (1 + (cdp2.DESCUENTOPORCENTAJE / 100))) * {1 - ppv})) * 100, 0) as 'RENTABILIDAD'
             FROM {body} cdp 
             join {head} cdp2 on cdp2.NUMEROCOMPROBANTE = cdp.NUMEROCOMPROBANTE -- Metemos cdp2 para sacar info cliente
             join clientes_distri cd on cdp2.CODIGOCLIENTE = cd.CODIGOCLIENTE -- metemos cd para sacar CODIGOPARTICULAR del cliente
