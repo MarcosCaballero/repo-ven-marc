@@ -87,7 +87,7 @@ def getNewInfoCant():
         res = {}
         # Tomamos la información de las fechas que viene por query params
         month = request.args.get("date")
-        ppv = 0.2 #float(request.args.get("ppv"))
+        ppv = 0.17 #float(request.args.get("ppv"))
         ppc = 0 #float(request.args.get("ppc"))
         phone = request.args.getlist("phone[]")
         brands = request.args.getlist("brands[]")
