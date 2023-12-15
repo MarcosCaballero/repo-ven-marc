@@ -1,6 +1,6 @@
 from helpers.connection import connectionLocal, connectionConfig
 import pandas as pd
-import funcition.queries as q
+import function.queries as q
 from time import time
 import os
 from sqlalchemy import text
@@ -45,7 +45,7 @@ def getInforme(condition = ["PPAL", "DS"], dbs = ["DISTRI", "DIMES"]):
                 for type in condition:
                     db_params = ARR_DBS[db][type]
                     print(f"Base de datos: {db_params[0]}")
-                    
+                    print(q.getDataPrevia(db_params[1], db_params[2], period=period[0].upper(), from_date=period[1], to_date=period[2]))
                     data_previa = pd.read_sql(q.getDataPrevia(db_params[1], db_params[2], period=period[0].upper(), from_date=period[1], to_date=period[2]), con=connLocal)
                     data_previa['CODIGOMARCA'] = data_previa['CODIGOMARCA'].astype(str)
                     data_previa['RAZONSOCIAL'] = data_previa['RAZONSOCIAL'].astype(str)
